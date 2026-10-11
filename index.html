@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Licencia Virtual CNC</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="escudo.png">
+<style>
+  :root{--azul:#1565c0;--azul2:#0a2a5e;--rojo:#e53935;--amar:#ffca28;--verde:#43a047}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%}
+  body{font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;color:var(--azul2);
+    background:linear-gradient(180deg,#4fc3f7 0%,#b3e5fc 60%,#c8f0a8 60%,#8bc34a 100%);
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px 14px 96px}
+  .road{position:fixed;left:0;right:0;bottom:0;height:64px;background:#37474f;border-top:6px solid #fff;z-index:0}
+  .road::before{content:"";position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;
+    background:repeating-linear-gradient(90deg,#ffeb3b 0 40px,transparent 40px 80px)}
+  .card{position:relative;z-index:1;background:#fff;border-radius:28px;max-width:760px;width:100%;
+    padding:22px 18px 26px;text-align:center;box-shadow:0 10px 0 rgba(10,42,94,.18),0 18px 40px rgba(0,0,0,.18)}
+  .logo{width:64px;height:64px;border-radius:50%;border:4px solid var(--amar);object-fit:cover}
+  h1{margin:6px 0 4px;font-size:clamp(1.5rem,5vw,2.2rem);line-height:1.15;color:var(--azul)}
+  p{margin:0 auto 14px;max-width:46ch;font-size:1.05rem;line-height:1.45}
+  #lic{display:block;width:100%;height:auto;border-radius:16px;margin:8px 0 18px;
+    box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .btns{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:18px;padding:14px 26px;font-size:1.15rem;
+    font-weight:800;color:#fff;background:linear-gradient(180deg,#42a5f5,#1565c0);
+    box-shadow:0 6px 0 #0d47a1,0 10px 14px rgba(0,0,0,.2);transition:transform .1s}
+  button.green{background:linear-gradient(180deg,#66bb6a,#2e7d32);box-shadow:0 6px 0 #1b5e20,0 10px 14px rgba(0,0,0,.2)}
+  button:active{transform:translateY(5px)}
+  button:focus-visible{outline:4px solid var(--amar);outline-offset:3px}
+  .hint{font-size:.9rem;color:#546e9a;margin-top:14px}
+  .hidden{display:none!important}
+  @media (prefers-reduced-motion:reduce){button{transition:none}}
+</style>
+</head>
+<body>
+<div class="road" aria-hidden="true"></div>
+
+<main class="card">
+  <img class="logo" src="escudo.png" alt="">
+
+  <section id="ok" class="hidden">
+    <h1>🪪 ¡Licencia lista!</h1>
+    <p id="saludo"></p>
+    <img id="lic" alt="Licencia Virtual CNC">
+    <div class="btns">
+      <button id="btnDescargar">⬇ Descargar imagen</button>
+      <button id="btnCompartir" class="green hidden">📤 Compartir</button>
+    </div>
+    <p class="hint">En iPhone, si no se descarga, mantén presionada la imagen y elige «Guardar en Fotos».</p>
+  </section>
+
+  <section id="error" class="hidden">
+    <h1>🚧 No encontramos la licencia</h1>
+    <p>Este enlace está incompleto. Escanea de nuevo el código QR que aparece en la licencia del juego.</p>
+  </section>
+</main>
+
+<script>
+/* Mini generador de códigos QR (modo byte, nivel L, versiones 1-5) */
+function makeQR(text){
+  const bytes=Array.from(new TextEncoder().encode(text));
+  const VERS=[null,{d:19,e:7,al:[]},{d:34,e:10,al:[6,18]},{d:55,e:15,al:[6,22]},{d:80,e:20,al:[6,26]},{d:108,e:26,al:[6,30]}];
+  let v=1; while(v<=5 && bytes.length>VERS[v].d-2) v++;
+  if(v>5) throw new Error('Texto muy largo para el QR');
+  const {d:dataCw,e:ecCw,al}=VERS[v], size=17+4*v;
+  // --- datos ---
+  let bits=[]; const put=(val,len)=>{for(let i=len-1;i>=0;i--)bits.push((val>>i)&1)};
+  put(4,4); put(bytes.length,8); bytes.forEach(b=>put(b,8));
+  const cap=dataCw*8; put(0,Math.min(4,cap-bits.length));
+  while(bits.length%8) bits.push(0);
+  const data=[]; for(let i=0;i<bits.length;i+=8){let n=0;for(let j=0;j<8;j++)n=n*2+bits[i+j];data.push(n)}
+  for(let p=0;data.length<dataCw;p++) data.push(p%2?0x11:0xEC);
+  // --- Reed-Solomon ---
+  const EXP=new Array(512),LOG=new Array(256); let x=1;
+  for(let i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&256)x^=0x11d}
+  for(let i=255;i<512;i++)EXP[i]=EXP[i-255];
+  const mul=(a,b)=>a&&b?EXP[LOG[a]+LOG[b]]:0;
+  let gen=[1];
+  for(let i=0;i<ecCw;i++){const ng=new Array(gen.length+1).fill(0);
+    for(let j=0;j<gen.length;j++){ng[j]^=gen[j];ng[j+1]^=mul(gen[j],EXP[i])} gen=ng}
+  const rem=new Array(ecCw).fill(0);
+  data.forEach(b=>{const f=b^rem.shift();rem.push(0);for(let i=0;i<ecCw;i++)rem[i]^=mul(gen[i+1],f)});
+  const all=data.concat(rem);
+  // --- matriz ---
+  const M=Array.from({length:size},()=>new Array(size).fill(null)), F=Array.from({length:size},()=>new Array(size).fill(false));
+  const set=(r,c,val)=>{M[r][c]=val;F[r][c]=true};
+  const finder=(r0,c0)=>{for(let r=-1;r<=7;r++)for(let c=-1;c<=7;c++){
+    const rr=r0+r,cc=c0+c; if(rr<0||cc<0||rr>=size||cc>=size)continue;
+    const on=(r>=0&&r<=6&&(c===0||c===6))||(c>=0&&c<=6&&(r===0||r===6))||(r>=2&&r<=4&&c>=2&&c<=4);
+    set(rr,cc,on)}};
+  finder(0,0);finder(0,size-7);finder(size-7,0);
+  for(let i=8;i<size-8;i++){set(6,i,i%2===0);set(i,6,i%2===0)}
+  if(al.length){const cs=[al[0],al[1]];
+    cs.forEach(r=>cs.forEach(c=>{ if(F[r][c])return;
+      for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++)
+        set(r+dr,c+dc,Math.max(Math.abs(dr),Math.abs(dc))!==1)}))}
+  set(size-8,8,true); // módulo oscuro
+  for(let i=0;i<9;i++){ if(!F[8][i])set(8,i,false); if(!F[i][8])set(i,8,false)}
+  for(let i=0;i<8;i++){ if(!F[8][size-1-i])set(8,size-1-i,false); if(!F[size-1-i][8])set(size-1-i,8,false)}
+  // colocar datos en zigzag
+  const dbits=[]; all.forEach(b=>{for(let i=7;i>=0;i--)dbits.push((b>>i)&1)});
+  const place=mask=>{
+    const G=M.map(r=>r.slice()); let k=0,up=true;
+    for(let c=size-1;c>0;c-=2){ if(c===6)c--;
+      for(let i=0;i<size;i++){ const r=up?size-1-i:i;
+        for(let j=0;j<2;j++){const cc=c-j; if(F[r][cc])continue;
+          let bit=k<dbits.length?dbits[k]:0; k++;
+          const m=[(r+cc)%2===0,r%2===0,cc%3===0,(r+cc)%3===0,(Math.floor(r/2)+Math.floor(cc/3))%2===0,(r*cc)%2+(r*cc)%3===0,((r*cc)%2+(r*cc)%3)%2===0,((r+cc)%2+(r*cc)%3)%2===0][mask];
+          G[r][cc]=!!(bit^(m?1:0))}}
+      up=!up}
+    // info de formato (nivel L = 01)
+    let fd=(1<<3)|mask, f=fd<<10; for(let i=14;i>=10;i--) if((f>>i)&1) f^=0x537<<(i-10);
+    const fmt=((fd<<10)|f)^0x5412, bit=i=>((fmt>>i)&1)===1;
+    for(let i=0;i<=5;i++)G[i][8]=bit(i); G[7][8]=bit(6); G[8][8]=bit(7); G[8][7]=bit(8);
+    for(let i=9;i<15;i++)G[8][14-i]=bit(i);
+    for(let i=0;i<8;i++)G[8][size-1-i]=bit(i);
+    for(let i=8;i<15;i++)G[size-15+i][8]=bit(i);
+    G[size-8][8]=true;
+    return G};
+  const penalty=G=>{let p=0;
+    for(let t=0;t<2;t++){for(let a=0;a<size;a++){let run=1;
+      for(let b=1;b<size;b++){const cur=t?G[b][a]:G[a][b],prev=t?G[b-1][a]:G[a][b-1];
+        if(cur===prev){run++;if(run===5)p+=3;else if(run>5)p++}else run=1}}}
+    for(let r=0;r<size-1;r++)for(let c=0;c<size-1;c++){const s=G[r][c];if(s===G[r][c+1]&&s===G[r+1][c]&&s===G[r+1][c+1])p+=3}
+    let dark=0;G.forEach(r=>r.forEach(c=>{if(c)dark++}));p+=Math.floor(Math.abs(dark*20/(size*size)-10))*10;
+    return p};
+  let best=null,bp=1e9; for(let m=0;m<8;m++){const G=place(m),pp=penalty(G);if(pp<bp){bp=pp;best=G}}
+  return best;
+}
+
+
+
+/* ===================== Configuración ===================== */
+// Parámetros del enlace:
+//   n = nombre (texto, codificado con encodeURIComponent)
+//   i = número de licencia: "12" o "0501-000012-CNC"
+//   d = fecha de emisión AAAAMMDD, por ejemplo 20261011
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+
+function leerNombre(){
+  return (params.get('n') || '').replace(/\s+/g,' ').trim().slice(0,40);
+}
+function leerNumero(){
+  const raw = (params.get('i') || '').trim().toUpperCase();
+  if (/^\d{1,6}$/.test(raw)) return '0501-' + raw.padStart(6,'0') + '-CNC';
+  if (/^\d{4}-\d{6}-CNC$/.test(raw)) return raw;
+  return '';
+}
+function leerFecha(){
+  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(params.get('d') || '');
+  if (!m) return null;
+  const f = new Date(+m[1], +m[2]-1, +m[3]);
+  return (f.getMonth() === +m[2]-1) ? f : null;   // descarta fechas como 20261345
+}
+
+const nombre = leerNombre();
+const licNum = leerNumero();
+const fecha  = leerFecha();
+
+/* ===================== Dibujo de la licencia ===================== */
+// Mismo diseño que la licencia del juego.
+function drawQR(c,x,y,size,text){
+  const m=makeQR(text), n=m.length, quiet=2, cell=size/(n+quiet*2);
+  c.fillStyle='#fff'; c.fillRect(x,y,size,size);
+  c.fillStyle='#0a2a5e';
+  for(let r=0;r<n;r++)for(let k=0;k<n;k++) if(m[r][k]) c.fillRect(x+(k+quiet)*cell,y+(r+quiet)*cell,Math.ceil(cell),Math.ceil(cell));
+  c.strokeStyle='#0a2a5e'; c.lineWidth=3; c.strokeRect(x,y,size,size);
+}
+function circleImg(c,img,cx,cy,r){
+  c.save(); c.beginPath(); c.arc(cx,cy,r,0,Math.PI*2); c.clip();
+  c.drawImage(img,cx-r,cy-r,r*2,r*2); c.restore();
+}
+
+function dibujarLicencia(escudoImg){
+  const cv=document.createElement('canvas'); cv.width=1011; cv.height=638;
+  const c=cv.getContext('2d'), W=cv.width, H=cv.height;
+  const name=nombre.toUpperCase();
+
+  const bg=c.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#fffde7'); bg.addColorStop(1,'#bbdefb');
+  c.fillStyle=bg; c.fillRect(0,0,W,H);
+  if(escudoImg){ c.save(); c.globalAlpha=.09; c.drawImage(escudoImg,W/2-170,225,340,340); c.restore(); }
+
+  const hg=c.createLinearGradient(0,0,W,0); hg.addColorStop(0,'#0a2a5e'); hg.addColorStop(1,'#1e6fd0');
+  c.fillStyle=hg; c.fillRect(0,0,W,170);
+  c.fillStyle='#ffca28'; c.fillRect(0,170,W,8);
+  c.fillStyle='#e53935'; c.fillRect(0,178,W,5);
+  c.fillStyle='#fff'; c.textAlign='left';
+  c.font='bold 54px "Trebuchet MS",Arial'; c.fillText('LICENCIA VIRTUAL CNC',40,72);
+  c.font='bold 36px "Trebuchet MS",Arial'; c.fillStyle='#ffe082'; c.fillText('Colegio Nicolás Copérnico',40,120);
+  c.font='22px "Trebuchet MS",Arial'; c.fillStyle='#bcd7ff'; c.fillText('Educación Vial · Kinder 5',40,153);
+
+  c.fillStyle='#fff'; c.beginPath(); c.arc(W-100,85,72,0,7); c.fill();
+  c.strokeStyle='#ffca28'; c.lineWidth=6; c.stroke();
+  if(escudoImg) circleImg(c,escudoImg,W-100,85,66);
+
+  c.textAlign='left'; c.fillStyle='#546e9a'; c.font='22px "Trebuchet MS",Arial';
+  c.fillText('Clase / Class',50,235);
+  c.fillStyle='#0a2a5e'; c.font='bold 38px "Trebuchet MS",Arial'; c.fillText('EDUCACIÓN VIAL',50,278);
+  c.fillStyle='#546e9a'; c.font='22px "Trebuchet MS",Arial'; c.fillText('No.',50,325);
+  c.fillStyle='#c62828'; c.font='bold 44px "Trebuchet MS",Arial'; c.fillText(licNum,50,370);
+  c.fillStyle='#546e9a'; c.font='22px "Trebuchet MS",Arial'; c.fillText('Nombre / Name',50,420);
+  let fs=48; c.font=`bold ${fs}px "Trebuchet MS",Arial`;
+  while(c.measureText(name).width>W-100 && fs>18){ fs-=2; c.font=`bold ${fs}px "Trebuchet MS",Arial`; }
+  c.fillStyle='#0a2a5e'; c.fillText(name,50,468);
+  c.fillStyle='#43a047'; c.fillRect(50,482,150,9);
+
+  // Fechas: salen del enlace, no del día en que se escanea
+  const exp=`${String(fecha.getMonth()+1).padStart(2,'0')}-${fecha.getFullYear()+5}`;
+  c.fillStyle='#546e9a'; c.font='22px "Trebuchet MS",Arial'; c.fillText('Vence / Expires',560,235);
+  c.fillStyle='#0a2a5e'; c.font='bold 38px "Trebuchet MS",Arial'; c.fillText(exp,560,278);
+  c.fillStyle='#546e9a'; c.font='22px "Trebuchet MS",Arial'; c.fillText('Emitida',560,325);
+  c.fillStyle='#0a2a5e'; c.font='bold 30px "Trebuchet MS",Arial'; c.fillText(fecha.toLocaleDateString('es-SV'),560,362);
+
+  c.strokeStyle='#1a237e'; c.lineWidth=3; c.lineCap='round';
+  c.beginPath(); c.moveTo(50,548); c.bezierCurveTo(80,490,100,590,130,527); c.bezierCurveTo(150,485,170,580,200,534);
+  c.bezierCurveTo(220,498,250,565,290,522); c.bezierCurveTo(320,498,340,547,390,518); c.stroke();
+  c.lineWidth=1.5; c.beginPath(); c.moveTo(50,560); c.lineTo(420,554); c.stroke();
+  c.fillStyle='#0a2a5e'; c.textAlign='left'; c.font='bold 22px "Trebuchet MS",Arial'; c.fillText('Josué Iván Mena Hurtado',50,581);
+  c.fillStyle='#546e9a'; c.font='17px "Trebuchet MS",Arial'; c.fillText('Director de Tránsito',50,599);
+
+  // El QR de la imagen descargada apunta a esta misma página
+  let qrTexto = location.href;
+  try { makeQR(qrTexto); } catch(e){ qrTexto = `CNC|Licencia ${licNum}|Colegio Nicolas Copernico`; }
+  drawQR(c,W-190,H-34-18-150,150,qrTexto);
+  c.fillStyle='#546e9a'; c.textAlign='center'; c.font='bold 14px "Trebuchet MS",Arial'; c.fillText('ESCANÉAME',W-190+75,H-34-18-150-8);
+
+  c.fillStyle='#d62828'; c.fillRect(0,H-34,W,34);
+  c.fillStyle='#fff'; c.textAlign='center'; c.font='bold 16px "Trebuchet MS",Arial';
+  c.fillText('RECUERDO ESCOLAR DEL JUEGO CNC · NO ES UN DOCUMENTO OFICIAL',W/2,H-11);
+  c.strokeStyle='#0a2a5e'; c.lineWidth=6; c.strokeRect(3,3,W-6,H-6);
+  return cv;
+}
+
+/* ===================== Descarga ===================== */
+const nombreArchivo = `Licencia_CNC_${licNum}_${(nombre||'estudiante').replace(/\s+/g,'_')}.png`;
+let blobLicencia = null;
+
+function descargar(){
+  if(!blobLicencia) return;
+  const url = URL.createObjectURL(blobLicencia);
+  const a = document.createElement('a');
+  a.href = url; a.download = nombreArchivo;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+async function compartir(){
+  try{
+    const file = new File([blobLicencia], nombreArchivo, {type:'image/png'});
+    await navigator.share({files:[file], title:'Licencia Virtual CNC'});
+  }catch(e){ /* el usuario canceló */ }
+}
+
+/* ===================== Inicio ===================== */
+function mostrar(escudoImg){
+  const cv = dibujarLicencia(escudoImg);
+  cv.toBlob(blob=>{
+    blobLicencia = blob;
+    $('lic').src = URL.createObjectURL(blob);
+    const f = new File([blob], nombreArchivo, {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[f]})) $('btnCompartir').classList.remove('hidden');
+  }, 'image/png');
+  $('saludo').textContent = `Felicidades, ${nombre}. Ya puedes guardar tu licencia de Educación Vial.`;
+  $('ok').classList.remove('hidden');
+}
+
+if(!nombre || !licNum || !fecha){
+  $('error').classList.remove('hidden');
+}else{
+  $('btnDescargar').addEventListener('click', descargar);
+  $('btnCompartir').addEventListener('click', compartir);
+  const img = new Image();
+  img.onload = ()=> mostrar(img);
+  img.onerror = ()=> mostrar(null);
+  img.src = 'escudo.png';
+}
+</script>
+</body>
+</html>
